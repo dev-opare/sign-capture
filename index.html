@@ -3,334 +3,50 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Custom Gesture Detection</title>
+    <title>Sign Language Detection</title>
     <style>
-      /* Basic Reset */
-      * {
+      /* Styling for the page */
+      body {
+        font-family: Arial, sans-serif;
         margin: 0;
         padding: 0;
-        box-sizing: border-box;
-      }
-      body {
+        background: #f9f9f9;
         display: flex;
         flex-direction: column;
-        align-items: center;
-        justify-content: center;
+        justify-content: space-between;
         height: 100vh;
-        background-color: #03045e;
-        font-family: Arial, sans-serif;
       }
 
-      h1 {
-        margin-bottom: 75px;
-        text-align: center;
-        text-transform: uppercase;
-        color: #f4f4f4;
-      }
-
-      video {
+      #video {
+        width: 100%;
+        height: auto;
         display: none;
-        border: 2px solid #333;
-        border-radius: 10px;
-        margin-bottom: 20px;
       }
 
-      .controls {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 20px;
-      }
-
-      .btn_main {
-        padding: 18px 24px;
-        font-size: 14px;
-        text-transform: capitalize;
-        font-weight: 500;
-        border: none;
-        border-radius: 15px;
-        cursor: pointer;
-        background-color: #f4f4f4;
-        color: #03045e;
-        transition: background 0.3s;
-      }
-
-      .btn_main:hover {
-        background-color: #555;
-      }
-
-      .gesture-output {
+      #gesture-output {
+        text-align: center;
         font-size: 24px;
-        color: #f4f4f4;
-        margin-top: 20px;
+        margin-top: 10px;
       }
 
-      .button-container {
-        display: flex;
-        gap: 50px;
-        background-color: #e0e0e0;
-        border-radius: 50px;
-        padding: 10px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-        margin-bottom: 20px; /* Space from bottom */
-        position: fixed;
-        bottom: 10px; /* Fixed at bottom */
-        z-index: 100;
-      }
-
-      .button1 {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background-color: #fff;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        transition: all 0.3s ease;
+      /* Button Styles */
+      .btn {
+        padding: 10px 20px;
+        font-size: 18px;
         cursor: pointer;
+        background-color: #4caf50;
+        color: white;
         border: none;
+        border-radius: 5px;
+        margin: 10px;
+        transition: background-color 0.3s;
       }
 
-      .button1 svg {
-        width: 100px;
-        height: 100px;
-        fill: #03045e;
-        transition: all 0.3s ease;
+      .btn:hover {
+        background-color: #45a049;
       }
 
-      /* Active button styling */
-      .button1.active {
-        background-color: #fff;
-      }
-
-      .button1.active svg {
-        fill: #03045e;
-      }
-
-      /* Hover effect */
-      .button1:hover {
-        background-color: #333;
-      }
-
-      .button1:hover svg {
-        fill: #fff;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>HTU Gesture Detection</h1>
-
-    <!-- Start and Stop Buttons -->
-    <div class="controls">
-      <button id="start-btn" class="btn_main">Start Detection</button>
-      <button id="stop-btn" class="btn_main">Stop Detection</button>
-    </div>
-
-    <!-- Video Feed -->
-    <video id="video" autoplay></video>
-
-    <!-- Detected Gesture Output -->
-    <div class="gesture-output" id="gesture-output">Detected Gesture: None</div>
-
-    <!-- Bottom Menu -->
-    <div class="button-container">
-      <!-- Home Button -->
-      <button class="button1 active">
-        <!-- <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-          <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
-        </svg> -->
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          class="size-6"
-        >
-          <path
-            d="M11.47 3.841a.75.75 0 0 1 1.06 0l8.69 8.69a.75.75 0 1 0 1.06-1.061l-8.689-8.69a2.25 2.25 0 0 0-3.182 0l-8.69 8.69a.75.75 0 1 0 1.061 1.06l8.69-8.689Z"
-          />
-          <path
-            d="m12 5.432 8.159 8.159c.03.03.06.058.091.086v6.198c0 1.035-.84 1.875-1.875 1.875H15a.75.75 0 0 1-.75-.75v-4.5a.75.75 0 0 0-.75-.75h-3a.75.75 0 0 0-.75.75V21a.75.75 0 0 1-.75.75H5.625a1.875 1.875 0 0 1-1.875-1.875v-6.198a2.29 2.29 0 0 0 .091-.086L12 5.432Z"
-          />
-        </svg>
-      </button>
-
-      <!-- Star Button -->
-      <button class="button1">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          class="size-6"
-        >
-          <path d="M12 9a3.75 3.75 0 1 0 0 7.5A3.75 3.75 0 0 0 12 9Z" />
-          <path
-            fill-rule="evenodd"
-            d="M9.344 3.071a49.52 49.52 0 0 1 5.312 0c.967.052 1.83.585 2.332 1.39l.821 1.317c.24.383.645.643 1.11.71.386.054.77.113 1.152.177 1.432.239 2.429 1.493 2.429 2.909V18a3 3 0 0 1-3 3h-15a3 3 0 0 1-3-3V9.574c0-1.416.997-2.67 2.429-2.909.382-.064.766-.123 1.151-.178a1.56 1.56 0 0 0 1.11-.71l.822-1.315a2.942 2.942 0 0 1 2.332-1.39ZM6.75 12.75a5.25 5.25 0 1 1 10.5 0 5.25 5.25 0 0 1-10.5 0Zm12-1.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
-            clip-rule="evenodd"
-          />
-        </svg>
-      </button>
-
-      <button class="button1">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          class="size-6"
-        >
-          <path
-            d="M5.625 1.5c-1.036 0-1.875.84-1.875 1.875v17.25c0 1.035.84 1.875 1.875 1.875h12.75c1.035 0 1.875-.84 1.875-1.875V12.75A3.75 3.75 0 0 0 16.5 9h-1.875a1.875 1.875 0 0 1-1.875-1.875V5.25A3.75 3.75 0 0 0 9 1.5H5.625Z"
-          />
-          <path
-            d="M12.971 1.816A5.23 5.23 0 0 1 14.25 5.25v1.875c0 .207.168.375.375.375H16.5a5.23 5.23 0 0 1 3.434 1.279 9.768 9.768 0 0 0-6.963-6.963Z"
-          />
-        </svg>
-      </button>
-      <!-- Pie Chart Button -->
-      <button class="button1">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          class="size-6"
-        >
-          <path
-            fill-rule="evenodd"
-            d="M18.685 19.097A9.723 9.723 0 0 0 21.75 12c0-5.385-4.365-9.75-9.75-9.75S2.25 6.615 2.25 12a9.723 9.723 0 0 0 3.065 7.097A9.716 9.716 0 0 0 12 21.75a9.716 9.716 0 0 0 6.685-2.653Zm-12.54-1.285A7.486 7.486 0 0 1 12 15a7.486 7.486 0 0 1 5.855 2.812A8.224 8.224 0 0 1 12 20.25a8.224 8.224 0 0 1-5.855-2.438ZM15.75 9a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z"
-            clip-rule="evenodd"
-          />
-        </svg>
-      </button>
-
-      <!-- Close Button -->
-    </div>
-    <!-- <div class="bottom-menu">
-
-      <div class="menu-item active">
-        <div class="menu-icon">🏠</div>
-      </div>
-      <div class="menu-item">
-        <div class="menu-icon">⭐</div>
-      </div>
-      <div class="menu-item">
-        <div class="menu-icon">◑</div>
-      </div>
-      <div class="menu-item">
-        <div class="menu-icon">✖</div>
-      </div>
-    </div> -->
-
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-    <script>
-      const videoElement = document.getElementById("video");
-      const startButton = document.getElementById("start-btn");
-      const stopButton = document.getElementById("stop-btn");
-      const outputElement = document.getElementById("gesture-output");
-      const menu = document.querySelector(".button-container");
-      let camera = null;
-
-      // Initialize MediaPipe Hands
-      const hands = new Hands({
-        locateFile: (file) =>
-          `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
-      });
-      hands.setOptions({
-        maxNumHands: 1,
-        modelComplexity: 1,
-        minDetectionConfidence: 0.7,
-        minTrackingConfidence: 0.7,
-      });
-      hands.onResults(onResults);
-
-      // Start Detection
-      startButton.addEventListener("click", () => {
-        videoElement.style.display = "block";
-        menu.style.display = "none"; // Hide the menu
-        if (!camera) {
-          camera = new Camera(videoElement, {
-            onFrame: async () => {
-              await hands.send({ image: videoElement });
-            },
-            width: 640,
-            height: 480,
-          });
-        }
-        camera.start();
-      });
-
-      // Stop Detection
-      stopButton.addEventListener("click", () => {
-        if (camera) {
-          camera.stop();
-          videoElement.style.display = "none";
-          outputElement.textContent = "Detected Gesture: None";
-          menu.style.display = "flex"; // Show the menu again
-        }
-      });
-
-      // Process Results and Detect Custom Gestures
-      function onResults(results) {
-        if (
-          !results.multiHandLandmarks ||
-          results.multiHandLandmarks.length === 0
-        ) {
-          outputElement.textContent = "Detected Gesture: None";
-          return;
-        }
-
-        const landmarks = results.multiHandLandmarks[0];
-        detectCustomGestures(landmarks);
-      }
-
-      // Detect Custom Gestures
-      function detectCustomGestures(landmarks) {
-        const thumbTip = landmarks[4];
-        const indexTip = landmarks[8];
-        const middleTip = landmarks[12];
-        const ringTip = landmarks[16];
-        const pinkyTip = landmarks[20];
-        const wrist = landmarks[0];
-
-        // Gesture 1: Thumb Up (Thumb above index finger)
-        if (
-          thumbTip.y < indexTip.y &&
-          thumbTip.y < middleTip.y &&
-          thumbTip.y < ringTip.y &&
-          thumbTip.y < pinkyTip.y
-        ) {
-          outputElement.textContent = "Detected Gesture: Thumbs Up";
-          return;
-        }
-
-        // Gesture 2: Point Up (Index finger raised, others curled)
-        const indexExtended =
-          indexTip.y < middleTip.y &&
-          indexTip.y < ringTip.y &&
-          indexTip.y < pinkyTip.y;
-        const thumbLow = thumbTip.y > wrist.y;
-        if (indexExtended && thumbLow) {
-          outputElement.textContent = "Detected Gesture: Point Up";
-          return;
-        }
-
-        // Gesture 3: Open Palm (All fingers extended and spread out)
-        const fingersExtended =
-          indexTip.y < wrist.y &&
-          middleTip.y < wrist.y &&
-          ringTip.y < wrist.y &&
-          pinkyTip.y < wrist.y;
-        if (fingersExtended) {
-          outputElement.textContent = "Detected Gesture: Open Palm";
-          return;
-        }
-
-        // Default: No gesture detected
-        outputElement.textContent = "Detected Gesture: None";
-      }
-    </script>
-
-    <!-- Styles for Bottom Menu -->
-    <style>
+      /* Bottom Menu */
       .bottom-menu {
         position: fixed;
         bottom: 20px;
@@ -369,8 +85,152 @@
       }
 
       .menu-icon {
-        font-size: 18px;
+        font-size: 24px;
+      }
+
+      /* Visibility Control */
+      .menu-top {
+        bottom: auto;
+        top: 20px;
       }
     </style>
+  </head>
+  <body>
+    <!-- Video Element -->
+    <video id="video" autoplay muted></video>
+
+    <!-- Gesture Output -->
+    <div id="gesture-output">Detected Gesture: None</div>
+
+    <!-- Buttons for Start and Stop -->
+    <div>
+      <button class="btn" id="start-btn">Start Detection</button>
+      <button class="btn" id="stop-btn">Stop Detection</button>
+    </div>
+
+    <!-- Bottom Menu -->
+    <div class="bottom-menu">
+      <div class="menu-item active">
+        <div class="menu-icon">🏠</div>
+      </div>
+      <div class="menu-item">
+        <div class="menu-icon">⭐</div>
+      </div>
+      <div class="menu-item">
+        <div class="menu-icon">◑</div>
+      </div>
+      <div class="menu-item">
+        <div class="menu-icon">✖</div>
+      </div>
+    </div>
+
+    <!-- Include TensorFlow and HandPose Script (replace with actual links if needed) -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/handpose"></script>
+    <script>
+      // Variables for camera and handpose model
+      let cameraStream = null;
+      let hands = null;
+      let camera = null;
+      const videoElement = document.getElementById("video");
+      const startButton = document.getElementById("start-btn");
+      const stopButton = document.getElementById("stop-btn");
+      const outputElement = document.getElementById("gesture-output");
+      const menu = document.querySelector(".bottom-menu");
+
+      // Load handpose model
+      handpose.load().then((model) => {
+        hands = model;
+        console.log("Handpose model loaded!");
+      });
+
+      // Start button to initiate camera and hand gesture detection
+      startButton.addEventListener("click", () => {
+        videoElement.style.display = "block";
+        menu.style.display = "none"; // Hide the menu
+
+        if (!cameraStream) {
+          // Request camera access
+          navigator.mediaDevices
+            .getUserMedia({ video: { facingMode: "environment" } })
+            .then((stream) => {
+              cameraStream = stream;
+              videoElement.srcObject = stream;
+              videoElement.play();
+
+              // Initialize hands detection
+              camera = new Camera(videoElement, {
+                onFrame: async () => {
+                  await hands.send({ image: videoElement });
+                },
+                width: 640,
+                height: 480,
+              });
+              camera.start();
+            })
+            .catch((error) => {
+              console.error("Camera access denied or error occurred: ", error);
+              alert("Camera access denied or error occurred.");
+            });
+        }
+      });
+
+      // Stop button to stop camera and hide video
+      stopButton.addEventListener("click", () => {
+        if (cameraStream) {
+          // Stop the video stream and hide the video
+          cameraStream.getTracks().forEach((track) => track.stop());
+          videoElement.style.display = "none";
+          outputElement.textContent = "Detected Gesture: None";
+          menu.style.display = "flex"; // Show the menu again
+        }
+      });
+
+      // Camera class to manage the video stream (simplified version)
+      class Camera {
+        constructor(videoElement, options) {
+          this.videoElement = videoElement;
+          this.options = options;
+        }
+
+        async start() {
+          while (true) {
+            await this.detectGesture();
+          }
+        }
+
+        stop() {
+          clearInterval(this.interval);
+        }
+
+        async detectGesture() {
+          const predictions = await hands.estimateHands(this.videoElement);
+          if (predictions.length > 0) {
+            // Example of recognizing gestures: Ok Sign and Victory Sign
+            const gesture = this.recognizeGesture(predictions[0]);
+            outputElement.textContent = "Detected Gesture: " + gesture;
+          }
+        }
+
+        recognizeGesture(prediction) {
+          // Dummy gesture recognition logic (replace with your custom gestures)
+          const landmarks = prediction.landmarks;
+          const thumbTip = landmarks[4];
+          const indexTip = landmarks[8];
+
+          // Example: Checking for "OK" sign based on thumb and index finger proximity
+          if (Math.abs(thumbTip[0] - indexTip[0]) < 50) {
+            return "OK Sign";
+          }
+
+          // Example: Checking for "Victory" sign (2 fingers extended)
+          if (Math.abs(landmarks[4][0] - landmarks[8][0]) > 100) {
+            return "Victory Sign";
+          }
+
+          return "Unknown Gesture";
+        }
+      }
+    </script>
   </body>
 </html>
