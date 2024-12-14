@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
   <style>
     /* General Reset */
 * {
@@ -26,38 +26,35 @@ body {
   min-height: 100vh;
 }
 
-/* Header */
 header {
   margin: 20px 0;
   color: #333;
 }
 
-/* Menu */
 #menu {
   text-align: center;
+  margin-bottom: 10px;
 }
 
 button {
-  padding: 10px 20px;
+  padding: 10px 15px;
+  margin: 5px;
   font-size: 16px;
   background-color: #4CAF50;
   color: white;
   border: none;
-  cursor: pointer;
   border-radius: 5px;
-  transition: background-color 0.3s ease;
+  cursor: pointer;
 }
 
 button:hover {
   background-color: #45a049;
 }
 
-/* Video Container */
 #video-container {
   position: relative;
-  margin: 20px 0;
-  width: 640px;
-  height: 480px;
+  width: 480px;
+  height: 360px;
   border: 2px solid #ddd;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
@@ -70,9 +67,8 @@ video, canvas {
   height: 100%;
 }
 
-/* Results */
 #results {
-  margin-top: 20px;
+  margin-top: 10px;
   text-align: center;
   color: #333;
 }
@@ -80,38 +76,36 @@ video, canvas {
   </style>
 </head>
 <body>
-  <!-- Header -->
   <header>
     <h1>Hand Detection Beta Testing</h1>
   </header>
 
-  <!-- Menu Section -->
   <div id="menu">
     <p>Click below to start hand detection:</p>
     <button id="startButton">Start Detection</button>
+    <button id="stopButton" style="display:none;">Stop Detection</button>
   </div>
 
-  <!-- Video Feed -->
   <div id="video-container">
     <video id="video" autoplay playsinline></video>
     <canvas id="output"></canvas>
   </div>
 
-  <!-- Results Display -->
   <div id="results">
     <h2>Detection Results:</h2>
     <p id="status">Waiting for detection...</p>
+    <p id="gesture">Custom Gesture: None</p>
   </div>
 
-  <!-- JavaScript -->
   <script>
     // Get UI Elements
 const startButton = document.getElementById("startButton");
+const stopButton = document.getElementById("stopButton");
 const videoElement = document.getElementById("video");
 const canvasElement = document.getElementById("output");
 const canvasCtx = canvasElement.getContext("2d");
-const menu = document.getElementById("menu");
 const status = document.getElementById("status");
+const gestureElement = document.getElementById("gesture");
 
 let camera = null;
 
@@ -127,45 +121,87 @@ hands.setOptions({
   minTrackingConfidence: 0.7,
 });
 
+// Helper: Identify Custom Gestures
+function recognizeGesture(landmarks) {
+  // Thumbs Up Gesture (Thumb extended, others folded)
+  const thumbTip = landmarks[4];
+  const thumbMCP = landmarks[2];
+  const indexTip = landmarks[8];
+  const middleTip = landmarks[12];
+
+  const thumbExtended = thumbTip.x < thumbMCP.x;
+  const fingersFolded = indexTip.y > thumbMCP.y && middleTip.y > thumbMCP.y;
+
+  if (thumbExtended && fingersFolded) return "Thumbs Up";
+
+  // Open Palm Gesture (All fingers extended)
+  const allFingersExtended =
+    landmarks[8].y < landmarks[6].y &&
+    landmarks[12].y < landmarks[10].y &&
+    landmarks[16].y < landmarks[14].y &&
+    landmarks[20].y < landmarks[18].y;
+
+  if (allFingersExtended) return "Open Palm";
+
+  return "None";
+}
+
+// MediaPipe Hands Results
 hands.onResults((results) => {
-  // Clear canvas
   canvasCtx.save();
   canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
 
-  // Draw video to canvas
   canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
-  // Draw hand landmarks
   if (results.multiHandLandmarks) {
+    let detectedGesture = "None";
+
     for (const landmarks of results.multiHandLandmarks) {
+      // Draw landmarks and connections
       drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, { color: "#00FF00", lineWidth: 3 });
       drawLandmarks(canvasCtx, landmarks, { color: "#FF0000", radius: 5 });
+
+      // Recognize gesture
+      detectedGesture = recognizeGesture(landmarks);
     }
+
+    gestureElement.innerText = `Custom Gesture: ${detectedGesture}`;
     status.innerText = "Hand Detected!";
   } else {
+    gestureElement.innerText = "Custom Gesture: None";
     status.innerText = "No Hands Detected";
   }
   canvasCtx.restore();
 });
 
-// Start Camera and Detection
+// Start Detection
 startButton.addEventListener("click", () => {
-  // Hide menu and show video
-  menu.style.display = "none";
-  videoElement.style.display = "block";
-  canvasElement.style.display = "block";
+  startButton.style.display = "none";
+  stopButton.style.display = "inline-block";
 
-  // Initialize Camera
   if (!camera) {
     camera = new Camera(videoElement, {
       onFrame: async () => {
         await hands.send({ image: videoElement });
       },
-      width: 640,
-      height: 480,
+      width: 480,
+      height: 360,
     });
-    camera.start();
   }
+  camera.start();
+});
+
+// Stop Detection
+stopButton.addEventListener("click", () => {
+  startButton.style.display = "inline-block";
+  stopButton.style.display = "none";
+
+  if (camera) {
+    camera.stop();
+  }
+  status.innerText = "Waiting for detection...";
+  gestureElement.innerText = "Custom Gesture: None";
+  canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
 });
 
   </script>
