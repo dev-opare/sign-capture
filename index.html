@@ -1,213 +1,281 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hand Detection Beta</title>
-  <link rel="stylesheet" href="styles.css">
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
-  <style>
-    /* General Reset */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: Arial, sans-serif;
-}
-hi{
-  test-transform:uppercase;
-  text-align:center;
-  color:royalblue;
-}
-body {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background-color: #f4f4f9;
-  min-height: 100vh;
-}
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hand Detection Beta</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <style>
+      /* General Reset */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: Arial, sans-serif;
+      }
 
-header {
-  margin: 20px 0;
-  color: #333;
-}
+      H1 {
+        text-transform: uppercase;
+        text-align: center;
+        color: royalblue;
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background-color: #f4f4f9;
+        min-height: 100vh;
+      }
 
-#menu {
-  text-align: center;
-  margin-bottom: 10px;
-}
+      header {
+        margin: 20px 0;
+        color: #333;
+      }
 
-button {
-  padding: 10px 15px;
-  margin: 5px;
-  font-size: 16px;
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
+      #menu {
+        text-align: center;
+        margin-bottom: 10px;
+      }
 
-button:hover {
-  background-color: #45a049;
-}
+      button {
+        padding: 10px 15px;
+        margin: 5px;
+        font-size: 16px;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
 
-#video-container {
-  position: relative;
-  width: 480px;
-  height: 360px;
-  border: 2px solid #ddd;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-}
+      button:hover {
+        background-color: #45a049;
+      }
 
-video, canvas {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-}
+      #video-container {
+        position: relative;
+        width: 480px;
+        height: 360px;
+        border: 2px solid #ddd;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+      }
 
-#results {
-  margin-top: 10px;
-  text-align: center;
-  color: #333;
-}
+      video,
+      canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+      }
 
-  </style>
-</head>
-<body>
-  <header>
-    <h1>Sign Detection</h1>
-  </header>
+      #results {
+        margin-top: 10px;
+        text-align: center;
+        color: #333;
+      }
+    </style>
 
-  <div id="menu">
-    <p>Click below to start hand detection:</p>
-    <button id="startButton">Start Detection</button>
-    <button id="stopButton" style="display:none;">Stop Detection</button>
-  </div>
+    <script>
+      // Get UI Elements
+      const startButton = document.getElementById("startButton");
+      const stopButton = document.getElementById("stopButton");
+      const videoElement = document.getElementById("video");
+      const canvasElement = document.getElementById("output");
+      const canvasCtx = canvasElement.getContext("2d");
+      const status = document.getElementById("status");
+      const gestureElement = document.getElementById("gesture");
 
-  <div id="video-container">
-    <video id="video" autoplay playsinline></video>
-    <canvas id="output"></canvas>
-  </div>
+      let camera = null;
 
-  <div id="results">
-    <h2>Detection Results:</h2>
-    <p id="status">Waiting for detection...</p>
-    <p id="gesture">Custom Gesture: None</p>
-  </div>
+      // Initialize MediaPipe Hands
+      const hands = new Hands({
+        locateFile: (file) =>
+          `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+      });
 
-  <script>
-    // Get UI Elements
-const startButton = document.getElementById("startButton");
-const stopButton = document.getElementById("stopButton");
-const videoElement = document.getElementById("video");
-const canvasElement = document.getElementById("output");
-const canvasCtx = canvasElement.getContext("2d");
-const status = document.getElementById("status");
-const gestureElement = document.getElementById("gesture");
+      hands.setOptions({
+        maxNumHands: 2,
+        modelComplexity: 1,
+        minDetectionConfidence: 0.8,
+        minTrackingConfidence: 0.8,
+      });
 
-let camera = null;
+      // Gesture Logic
+      function recognizeGesture(landmarks) {
+        const fingers = getFingerStates(landmarks);
 
-// Initialize MediaPipe Hands
-const hands = new Hands({
-  locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
-});
+        // Thumbs Up: Thumb extended, others folded
+        if (
+          fingers.thumbExtended &&
+          !fingers.indexExtended &&
+          !fingers.middleExtended &&
+          !fingers.ringExtended &&
+          !fingers.pinkyExtended
+        ) {
+          return "Thumbs Up";
+        }
 
-hands.setOptions({
-  maxNumHands: 2,
-  modelComplexity: 1,
-  minDetectionConfidence: 0.7,
-  minTrackingConfidence: 0.7,
-});
+        // Open Palm: All fingers extended
+        if (
+          fingers.thumbExtended &&
+          fingers.indexExtended &&
+          fingers.middleExtended &&
+          fingers.ringExtended &&
+          fingers.pinkyExtended
+        ) {
+          return "Open Palm";
+        }
 
-// Helper: Identify Custom Gestures
-function recognizeGesture(landmarks) {
-  // Thumbs Up Gesture (Thumb extended, others folded)
-  const thumbTip = landmarks[4];
-  const thumbMCP = landmarks[2];
-  const indexTip = landmarks[8];
-  const middleTip = landmarks[12];
+        // Victory Sign: Index and Middle fingers extended, others folded
+        if (
+          !fingers.thumbExtended &&
+          fingers.indexExtended &&
+          fingers.middleExtended &&
+          !fingers.ringExtended &&
+          !fingers.pinkyExtended
+        ) {
+          return "Victory Sign";
+        }
 
-  const thumbExtended = thumbTip.x < thumbMCP.x;
-  const fingersFolded = indexTip.y > thumbMCP.y && middleTip.y > thumbMCP.y;
+        // Fist: All fingers folded
+        if (
+          !fingers.thumbExtended &&
+          !fingers.indexExtended &&
+          !fingers.middleExtended &&
+          !fingers.ringExtended &&
+          !fingers.pinkyExtended
+        ) {
+          return "Fist";
+        }
 
-  if (thumbExtended && fingersFolded) return "Thumbs Up";
+        // OK Sign: Thumb and Index form a circle, others extended
+        if (isCircleFormed(landmarks)) {
+          return "OK Sign";
+        }
 
-  // Open Palm Gesture (All fingers extended)
-  const allFingersExtended =
-    landmarks[8].y < landmarks[6].y &&
-    landmarks[12].y < landmarks[10].y &&
-    landmarks[16].y < landmarks[14].y &&
-    landmarks[20].y < landmarks[18].y;
+        return "None";
+      }
 
-  if (allFingersExtended) return "Open Palm";
+      // Detect finger states: Extended or Folded
+      function getFingerStates(landmarks) {
+        const results = {
+          thumbExtended: landmarks[4].x < landmarks[3].x, // Thumb points away
+          indexExtended: landmarks[8].y < landmarks[6].y, // Tip above PIP joint
+          middleExtended: landmarks[12].y < landmarks[10].y,
+          ringExtended: landmarks[16].y < landmarks[14].y,
+          pinkyExtended: landmarks[20].y < landmarks[18].y,
+        };
+        return results;
+      }
 
-  return "None";
-}
+      // Check for "OK Sign" (Thumb and Index finger form a circle)
+      function isCircleFormed(landmarks) {
+        const thumbTip = landmarks[4];
+        const indexTip = landmarks[8];
+        const distance = Math.hypot(
+          thumbTip.x - indexTip.x,
+          thumbTip.y - indexTip.y
+        );
+        return distance < 0.05; // Threshold for "circle" proximity
+      }
 
-// MediaPipe Hands Results
-hands.onResults((results) => {
-  canvasCtx.save();
-  canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+      // MediaPipe Hands Results
+      hands.onResults((results) => {
+        canvasCtx.save();
+        canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+        canvasCtx.drawImage(
+          results.image,
+          0,
+          0,
+          canvasElement.width,
+          canvasElement.height
+        );
 
-  canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+        if (results.multiHandLandmarks) {
+          let detectedGesture = "None";
 
-  if (results.multiHandLandmarks) {
-    let detectedGesture = "None";
+          for (const landmarks of results.multiHandLandmarks) {
+            // Draw landmarks and connections
+            drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {
+              color: "#00FF00",
+              lineWidth: 3,
+            });
+            drawLandmarks(canvasCtx, landmarks, {
+              color: "#FF0000",
+              radius: 5,
+            });
 
-    for (const landmarks of results.multiHandLandmarks) {
-      // Draw landmarks and connections
-      drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, { color: "#00FF00", lineWidth: 3 });
-      drawLandmarks(canvasCtx, landmarks, { color: "#FF0000", radius: 5 });
+            // Recognize gesture
+            const gesture = recognizeGesture(landmarks);
+            if (gesture !== "None") detectedGesture = gesture;
+          }
 
-      // Recognize gesture
-      detectedGesture = recognizeGesture(landmarks);
-    }
+          gestureElement.innerText = `Custom Gesture: ${detectedGesture}`;
+          status.innerText = "Hand Detected!";
+        } else {
+          gestureElement.innerText = "Custom Gesture: None";
+          status.innerText = "No Hands Detected";
+        }
 
-    gestureElement.innerText = `Custom Gesture: ${detectedGesture}`;
-    status.innerText = "Hand Detected!";
-  } else {
-    gestureElement.innerText = "Custom Gesture: None";
-    status.innerText = "No Hands Detected";
-  }
-  canvasCtx.restore();
-});
+        canvasCtx.restore();
+      });
 
-// Start Detection
-startButton.addEventListener("click", () => {
-  startButton.style.display = "none";
-  stopButton.style.display = "inline-block";
+      // Start Detection
+      startButton.addEventListener("click", () => {
+        startButton.style.display = "none";
+        stopButton.style.display = "inline-block";
 
-  if (!camera) {
-    camera = new Camera(videoElement, {
-      onFrame: async () => {
-        await hands.send({ image: videoElement });
-      },
-      width: 480,
-      height: 360,
-    });
-  }
-  camera.start();
-});
+        if (!camera) {
+          camera = new Camera(videoElement, {
+            onFrame: async () => {
+              await hands.send({ image: videoElement });
+            },
+            width: 480,
+            height: 360,
+          });
+        }
+        camera.start();
+      });
 
-// Stop Detection
-stopButton.addEventListener("click", () => {
-  startButton.style.display = "inline-block";
-  stopButton.style.display = "none";
+      // Stop Detection
+      stopButton.addEventListener("click", () => {
+        startButton.style.display = "inline-block";
+        stopButton.style.display = "none";
 
-  if (camera) {
-    camera.stop();
-  }
-  status.innerText = "Waiting for detection...";
-  gestureElement.innerText = "Custom Gesture: None";
-  canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-});
+        if (camera) {
+          camera.stop();
+        }
+        status.innerText = "Waiting for detection...";
+        gestureElement.innerText = "Custom Gesture: None";
+        canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+      });
+    </script>
+  </head>
+  <body>
+    <header>
+      <h1>Sign Detection</h1>
+    </header>
 
-  </script>
-</body>
+    <div id="menu">
+      <p>Click below to start hand detection:</p>
+      <button id="startButton">Start Detection</button>
+      <button id="stopButton" style="display: none">Stop Detection</button>
+    </div>
+
+    <div id="video-container">
+      <video id="video" autoplay playsinline></video>
+      <canvas id="output"></canvas>
+    </div>
+
+    <div id="results">
+      <h2>Detection Results:</h2>
+      <p id="status">Waiting for detection...</p>
+      <p id="gesture">Custom Gesture: None</p>
+    </div>
+  </body>
 </html>
