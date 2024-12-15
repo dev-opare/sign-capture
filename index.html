@@ -16,7 +16,8 @@
         box-sizing: border-box;
         font-family: Arial, sans-serif;
       }
-      hi {
+
+      H1 {
         text-transform: uppercase;
         text-align: center;
         color: royalblue;
@@ -78,28 +79,6 @@
         color: #333;
       }
     </style>
-  </head>
-  <body>
-    <header>
-      <h1>Sign Detection</h1>
-    </header>
-
-    <div id="menu">
-      <p>Click below to start hand detection:</p>
-      <button id="start-btn">Start Detection</button>
-      <button id="stop-btn" style="display: none">Stop Detection</button>
-    </div>
-
-    <div id="video-container">
-      <video id="video" autoplay playsinline></video>
-      <canvas id="output"></canvas>
-    </div>
-
-    <div id="results">
-      <h2>Detection Results:</h2>
-      <p id="status">Waiting for detection...</p>
-      <p id="gesture">Custom Gesture: None</p>
-    </div>
 
     <script>
       // Get UI Elements
@@ -122,41 +101,93 @@
       hands.setOptions({
         maxNumHands: 2,
         modelComplexity: 1,
-        minDetectionConfidence: 0.7,
-        minTrackingConfidence: 0.7,
+        minDetectionConfidence: 0.8,
+        minTrackingConfidence: 0.8,
       });
 
-      // Helper: Identify Custom Gestures
+      // Gesture Logic
       function recognizeGesture(landmarks) {
-        // Thumbs Up Gesture (Thumb extended, others folded)
-        const thumbTip = landmarks[4];
-        const thumbMCP = landmarks[2];
-        const indexTip = landmarks[8];
-        const middleTip = landmarks[12];
+        const fingers = getFingerStates(landmarks);
 
-        const thumbExtended = thumbTip.x < thumbMCP.x;
-        const fingersFolded =
-          indexTip.y > thumbMCP.y && middleTip.y > thumbMCP.y;
+        // Thumbs Up: Thumb extended, others folded
+        if (
+          fingers.thumbExtended &&
+          !fingers.indexExtended &&
+          !fingers.middleExtended &&
+          !fingers.ringExtended &&
+          !fingers.pinkyExtended
+        ) {
+          return "Thumbs Up";
+        }
 
-        if (thumbExtended && fingersFolded) return "Thumbs Up";
+        // Open Palm: All fingers extended
+        if (
+          fingers.thumbExtended &&
+          fingers.indexExtended &&
+          fingers.middleExtended &&
+          fingers.ringExtended &&
+          fingers.pinkyExtended
+        ) {
+          return "Open Palm";
+        }
 
-        // Open Palm Gesture (All fingers extended)
-        const allFingersExtended =
-          landmarks[8].y < landmarks[6].y &&
-          landmarks[12].y < landmarks[10].y &&
-          landmarks[16].y < landmarks[14].y &&
-          landmarks[20].y < landmarks[18].y;
+        // Victory Sign: Index and Middle fingers extended, others folded
+        if (
+          !fingers.thumbExtended &&
+          fingers.indexExtended &&
+          fingers.middleExtended &&
+          !fingers.ringExtended &&
+          !fingers.pinkyExtended
+        ) {
+          return "Victory Sign";
+        }
 
-        if (allFingersExtended) return "Open Palm";
+        // Fist: All fingers folded
+        if (
+          !fingers.thumbExtended &&
+          !fingers.indexExtended &&
+          !fingers.middleExtended &&
+          !fingers.ringExtended &&
+          !fingers.pinkyExtended
+        ) {
+          return "Fist";
+        }
+
+        // OK Sign: Thumb and Index form a circle, others extended
+        if (isCircleFormed(landmarks)) {
+          return "OK Sign";
+        }
 
         return "None";
+      }
+
+      // Detect finger states: Extended or Folded
+      function getFingerStates(landmarks) {
+        const results = {
+          thumbExtended: landmarks[4].x < landmarks[3].x, // Thumb points away
+          indexExtended: landmarks[8].y < landmarks[6].y, // Tip above PIP joint
+          middleExtended: landmarks[12].y < landmarks[10].y,
+          ringExtended: landmarks[16].y < landmarks[14].y,
+          pinkyExtended: landmarks[20].y < landmarks[18].y,
+        };
+        return results;
+      }
+
+      // Check for "OK Sign" (Thumb and Index finger form a circle)
+      function isCircleFormed(landmarks) {
+        const thumbTip = landmarks[4];
+        const indexTip = landmarks[8];
+        const distance = Math.hypot(
+          thumbTip.x - indexTip.x,
+          thumbTip.y - indexTip.y
+        );
+        return distance < 0.05; // Threshold for "circle" proximity
       }
 
       // MediaPipe Hands Results
       hands.onResults((results) => {
         canvasCtx.save();
         canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-
         canvasCtx.drawImage(
           results.image,
           0,
@@ -180,7 +211,8 @@
             });
 
             // Recognize gesture
-            detectedGesture = recognizeGesture(landmarks);
+            const gesture = recognizeGesture(landmarks);
+            if (gesture !== "None") detectedGesture = gesture;
           }
 
           gestureElement.innerText = `Custom Gesture: ${detectedGesture}`;
@@ -189,6 +221,7 @@
           gestureElement.innerText = "Custom Gesture: None";
           status.innerText = "No Hands Detected";
         }
+
         canvasCtx.restore();
       });
 
@@ -222,5 +255,27 @@
         canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
       });
     </script>
+  </head>
+  <body>
+    <header>
+      <h1>Sign Detection</h1>
+    </header>
+
+    <div id="menu">
+      <p>Click below to start hand detection:</p>
+      <button id="star-btn">Start Detection</button>
+      <button id="stop-btn" style="display: none">Stop Detection</button>
+    </div>
+
+    <div id="video-container">
+      <video id="video" autoplay playsinline></video>
+      <canvas id="output"></canvas>
+    </div>
+
+    <div id="results">
+      <h2>Detection Results:</h2>
+      <p id="status">Waiting for detection...</p>
+      <p id="gesture">Custom Gesture: None</p>
+    </div>
   </body>
 </html>
