@@ -79,6 +79,28 @@
         color: #333;
       }
     </style>
+  </head>
+  <body>
+    <header>
+      <h1>Sign Detection</h1>
+    </header>
+
+    <div id="menu">
+      <p>Click below to start hand detection:</p>
+      <button id="start-btn">Start Detection</button>
+      <button id="stop-btn" style="display: none">Stop Detection</button>
+    </div>
+
+    <div id="video-container">
+      <video id="video" autoplay playsinline></video>
+      <canvas id="output"></canvas>
+    </div>
+
+    <div id="results">
+      <h2>Detection Results:</h2>
+      <p id="status">Waiting for detection...</p>
+      <p id="gesture">Custom Gesture: None</p>
+    </div>
 
     <script>
       // Get UI Elements
@@ -255,27 +277,5 @@
         canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
       });
     </script>
-  </head>
-  <body>
-    <header>
-      <h1>Sign Detection</h1>
-    </header>
-
-    <div id="menu">
-      <p>Click below to start hand detection:</p>
-      <button id="star-btn">Start Detection</button>
-      <button id="stop-btn" style="display: none">Stop Detection</button>
-    </div>
-
-    <div id="video-container">
-      <video id="video" autoplay playsinline></video>
-      <canvas id="output"></canvas>
-    </div>
-
-    <div id="results">
-      <h2>Detection Results:</h2>
-      <p id="status">Waiting for detection...</p>
-      <p id="gesture">Custom Gesture: None</p>
-    </div>
   </body>
 </html>
